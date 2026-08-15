@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jhajis RheumEMR Workstation</title>
+    
+    <!-- PWA Metadata -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00796b">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <style>
+        :root {
+            --primary: #009688;
+            --primary-dark: #00796b;
+            --primary-light: #e0f2f1;
+            --bg-main: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --red-light: #fee2e2;
+            --red: #ef4444;
+            --yellow-light: #fef3c7;
+            --yellow: #d97706;
+            --radius: 8px;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-dark); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        /* Application Header */
+        header {
+            background-color: var(--primary-dark);
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        .header-logo { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.5px; }
+
+        /* Main Workspace App Layout */
+        .workspace { display: flex; flex: 1; overflow: hidden; }
+
+        /* Sidebar Navigation */
+        sidebar {
+            width: 320px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+        .sidebar-menu { display: flex; gap: 8px; margin-bottom: 12px; }
+        .sidebar-menu button { flex: 1; padding: 8px; border: 1px solid var(--border); background: var(--bg-main); border-radius: var(--radius); font-weight: 600; cursor: pointer; }
+        .sidebar-menu button.active { background: var(--primary-dark); color: white; border-color: var(--primary-dark); }
+        .patient-list-container { flex: 1; overflow-y: auto; padding: 12px; }
+        .patient-card { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; cursor: pointer; transition: all 0.15s ease; }
+        .patient-card:hover { border-color: var(--primary-dark); background: var(--primary-light); }
+        .patient-card.active { border-color: var(--primary-dark); background: var(--primary-light); }
+
+        /* Main Content Panel */
+        content { flex: 1; overflow-y: auto; padding: 24px; }
+
+        /* UI Components */
+        .card { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
+        .card-title { font-size: 1.1rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 16px; border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+
+        .btn { padding: 10px 18px; border-radius: var(--radius); border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; }
+        .btn-primary { background: var(--primary-dark); color: white; }
+        .btn-primary:hover { background: #004d40; }
+        .btn-secondary { background: #e2e8f0; color: var(--text-dark); }
+        .btn-secondary:hover { background: #cbd5e1; }
+
+        .form-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+        .form-grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+        .form-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border-radius: var(--radius); border: 1px solid var(--border); font-size: 0.95rem; outline: none; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary-dark); box-shadow: 0 0 0 2px var(--primary-light); }
+
+        /* Joint Grid */
+        .joint-grid-desktop { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-bottom: 16px; }
+        .joint-btn { padding: 12px 6px; font-size: 0.8rem; border: 1px solid var(--border); border-radius: 6px; background: white; text-align: center; font-weight: 600; cursor: pointer; }
+        .joint-btn.tender { background: var(--yellow-light); border-color: var(--yellow); color: var(--yellow); }
+        .joint-btn.swollen { background: var(--red-light); border-color: var(--red); color: var(--red); }
+        .joint-btn.both { background: #fbcfe8; border-color: #db2777; color: #831843; }
+
+        /* Dashboard & Scores */
+        .score-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-top: 12px; }
+        .score-box { background: var(--primary-light); border: 1px solid #b2dfdb; padding: 12px; border-radius: var(--radius); text-align: center; }
+        .score-box-val { font-size: 1.6rem; font-weight: 800; color: var(--primary-dark); }
+        .score-box-lbl { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+
+        /* Checklist grids */
+        .checklist-desktop { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; font-size: 0.9rem; }
+        .check-item { display: flex; align-items: center; gap: 10px; background: #f8fafc; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
+
+        /* Rx Table */
+        .rx-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+        .rx-table th, .rx-table td { border: 1px solid var(--border); padding: 8px 12px; font-size: 0.85rem; text-align: left; }
+        .rx-table th { background: #f8fafc; font-weight: 600; }
+
+        /* PRINT STYLES - PROPORTIONAL LETTERHEAD */
+        #printable-prescription { display: none; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printable-prescription, #printable-prescription * { visibility: visible; }
+            #printable-prescription {
+                display: flex !important;
+                flex-direction: column;
+                justify-content: space-between;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                min-height: 98vh;
+                padding: 30px 40px;
+                background: #fffdf5; 
+                color: #004d40;
+                box-sizing: border-box;
+                font-family: Georgia, "Times New Roman", Times, serif;
+            }
+
+            .rx-header-box { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 2px solid #004d40; padding-bottom: 12px; margin-bottom: 8px; }
+            .rx-header-logo { width: 110px; height: 110px; flex-shrink: 0; }
+            .rx-title-main { font-family: "Times New Roman", Georgia, serif; font-size: 1.6rem; font-weight: bold; font-style: italic; color: #004d40; text-align: center; flex-grow: 1; line-height: 1.2; }
+            .rx-doctor-tag { text-align: center; font-size: 0.9rem; font-weight: bold; margin-top: 6px; color: #004d40; }
+            .rx-patient-bar { display: flex; justify-content: space-between; border-top: 1px solid #004d40; border-bottom: 1px solid #004d40; padding: 8px 4px; margin-top: 8px; margin-bottom: 18px; font-size: 1rem; font-style: italic; }
+            .rx-line-val { font-style: normal; font-weight: bold; border-bottom: 1px solid #004d40; padding: 0 6px; }
+            .rx-body { flex-grow: 1; margin-top: 10px; }
+            .rx-symbol-big { font-size: 2rem; font-weight: bold; font-family: Georgia, serif; margin-bottom: 12px; }
+            .rx-table-print { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            .rx-table-print th, .rx-table-print td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #e2e8f0; font-family: Arial, sans-serif; font-size: 0.9rem; }
+            .rx-table-print th { border-bottom: 2px solid #004d40; font-family: Georgia, serif; }
+            .rx-footer-box { border-top: 1px solid #004d40; padding-top: 10px; text-align: center; font-size: 0.85rem; line-height: 1.4; color: #004d40; }
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .workspace { flex-direction: column; }
+            sidebar { width: 100%; height: 220px; }
+            content { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-logo">
+            <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
+                <path d="M 28,30 C 42,27 48,22 50,18 C 52,22 58,27 72,30 C 73,50 71,68 59,80 C 53,85 51,87 50,88 C 49,87 47,85 41,80 C 29,68 27,50 28,30 Z" fill="#FFFFFF"/>
+                <path d="M 39,36 H 43 V 32 H 47 V 36 H 51 V 40 H 47 V 44 H 43 V 40 H 39 Z" fill="#009688"/>
+                <path d="M 45,15 C 47,28 47,38 52,43 C 55,46 58,45 58,51 C 58,56 53,58 51,62 C 49,66 50,78 52,85 C 49,78 47,68 48,62 C 49,58 53,56 53,51 C 53,47 50,47 47,42 C 43,36 43,26 43,15 Z" fill="#009688"/>
+            </svg>
+            JHAJI'S RHEUMATOLOGY EMR
+        </div>
+        <div style="font-size:0.85rem; font-weight:500; opacity:0.9;">PWA Ready v2.5</div>
+    </header>
+
+    <div class="workspace">
+        <sidebar>
+            <div class="sidebar-header">
+                <div class="sidebar-menu">
+                    <button class="active" id="btn-tab-patients" onclick="setSidebarTab('patients')">Patients</button>
+                    <button id="btn-tab-new" onclick="setSidebarTab('new')">New Patient</button>
+                </div>
+                <input type="text" placeholder="Search patients..." onkeyup="filterPatients(this.value)" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border);">
+            </div>
+            <div class="patient-list-container" id="patient-sidebar-list">
+                <!-- Injected via JavaScript -->
+            </div>
+        </sidebar>
+
+        <content id="main-workspace-content">
+            <!-- Dynamic workspace loaded here -->
+        </content>
+    </div>
+
+    <div id="printable-prescription"></div>
+
+    <script>
+        // --- PWA Service Worker Registration ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker Registered Successfully'))
+                    .catch(err => console.log('Service Worker Registration Failed:', err));
+            });
+        }
+
+        // --- Application Data & Logic ---
+        const diseaseOptions = [
+            "Rheumatoid Arthritis (RA)",
+            "Systemic Lupus Erythematosus (SLE)",
+            "Ankylosing Spondylitis (AS)",
+            "Psoriatic Arthritis (PsA)",
+            "Non-radiographic Axial Spondyloarthritis (nr-axSpA)",
+            "Systemic Sclerosis / Scleroderma",
+            "Sjögren's Syndrome",
+            "Idiopathic Inflammatory Myopathies (Dermatomyositis/Polymyositis)",
+            "Gout & Crystal Arthropathies",
+            "Granulomatosis with Polyangiitis (GPA / Wegener's)",
+            "Eosinophilic Granulomatosis with Polyangiitis (EGPA)",
+            "Microscopic Polyangiitis (MPA)",
+            "Takayasu Arteritis",
+            "Giant Cell Arteritis (GCA)",
+            "Behcet's Disease",
+            "Polymyalgia Rheumatica (PMR)",
+            "Reactive Arthritis",
+            "Enteropathic Arthritis (IBD-associated)",
+            "Osteoarthritis",
+            "Fibromyalgia & Chronic Pain Syndromes",
+            "IgA Vasculitis (Henoch-Schönlein Purpura)",
+            "Mixed Connective Tissue Disease (MCTD)",
+            "Undifferentiated Connective Tissue Disease (UCTD)"
+        ];
+
+        const defaultPatients = [
+            {
+                id: "RHEUM-1001",
+                name: "Sarah Jenkins",
+                age: 42,
+                gender: "Female",
+                diagnosis: "Rheumatoid Arthritis (RA)",
+                visits: [
+                    {
+                        date: "2026-06-10",
+                        complaints: "Morning stiffness ~45 mins, hand swelling.",
+                        assessment: "Moderate activity. Escalating MTX.",
+                        rx: [
+                            { name: "Tab. Methotrexate", dose: "15mg", freq: "Weekly", duration: "3 Months" },
+                            { name: "Tab. Folic Acid", dose: "5mg", freq: "Weekly", duration: "3 Months" }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        function getPatients() {
+            const data = localStorage.getItem('rheum_desktop_v2');
+            return data ? JSON.parse(data) : defaultPatients;
+        }
+
+        function savePatients(data) {
+            localStorage.setItem('rheum_desktop_v2', JSON.stringify(data));
+        }
+
+        let selectedPatientId = "RHEUM-1001";
+        let activeConsultation = null;
+        let sidebarMode = 'patients';
+
+        const jointsList = [
+            "L Shoulder", "R Shoulder", "L Elbow", "R Elbow", "L Wrist", "R Wrist",
+            "L MCP 1-5", "R MCP 1-5", "L PIP 1-5", "R PIP 1-5", "L Knee", "R Knee"
+        ];
+
+        function renderSidebar() {
+            const patients = getPatients();
+            const listContainer = document.getElementById('patient-sidebar-list');
+
+            if (sidebarMode === 'patients') {
+                listContainer.innerHTML = patients.map(p => `
+                    <div class="patient-card ${p.id === selectedPatientId ? 'active' : ''}" onclick="selectPatient('${p.id}')">
+                        <div style="font-weight:700;">${p.name}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${p.age} Y/O ${p.gender} | ${p.id}</div>
+                        <div style="font-size:0.75rem; color:var(--primary-dark); font-weight:600; margin-top:4px;">${p.diagnosis}</div>
+                    </div>
+                `).join('');
+            } else {
+                listContainer.innerHTML = `
+                    <div style="padding: 10px;">
+                        <h4 style="margin-bottom:12px;">New Patient Entry</h4>
+                        <form onsubmit="handleRegister(event)">
+                            <div class="form-group"><label>Full Name *</label><input type="text" id="d-name" required></div>
+                            <div class="form-group"><label>Age *</label><input type="number" id="d-age" required></div>
+                            <div class="form-group">
+                                <label>Sex *</label>
+                                <select id="d-sex"><option>Female</option><option>Male</option><option>Other</option></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Diagnosis *</label>
+                                <select id="d-diag" required>
+                                    ${diseaseOptions.map(d => `<option value="${d}">${d}</option>`).join('')}
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width:100%;">Create Patient Profile</button>
+                        </form>
+                    </div>
+                `;
+            }
+        }
+
+        function renderWorkspace() {
+            const container = document.getElementById('main-workspace-content');
+            const patients = getPatients();
+            const p = patients.find(x => x.id === selectedPatientId);
+
+            if (!p) {
+                container.innerHTML = `<div class="card">Select a patient from the left sidebar to open clinical records.</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <h2 style="color:var(--primary-dark);">${p.name}</h2>
+                        <div style="font-size:0.9rem; color:var(--text-muted); margin-top:4px;">
+                            ID: <strong>${p.id}</strong> | Age: <strong>${p.age}</strong> | Gender: <strong>${p.gender}</strong> | Condition: <strong>${p.diagnosis}</strong>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="startConsultation()">🩺 Start Visit Consultation</button>
+                </div>
+
+                <div id="active-consultation-section"></div>
+
+                <div class="card">
+                    <div class="card-title">Patient Visit Records & Medical History</div>
+                    ${p.visits && p.visits.length > 0 ? `
+                        <table class="rx-table">
+                            <thead>
+                                <tr><th>Visit Date</th><th>Clinical Summary / Assessment</th><th>Prescriptions Recorded</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody>
+                                ${p.visits.map((v, idx) => `
+                                    <tr>
+                                        <td><strong>${v.date}</strong></td>
+                                        <td>${v.assessment || 'Routine follow-up'}</td>
+                                        <td>${v.rx ? v.rx.map(m => `${m.name} (${m.dose})`).join(', ') : 'None'}</td>
+                                        <td><button class="btn btn-secondary" onclick="printPrescription('${p.id}', ${idx})">🖨️ Print Rx</button></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : '<p style="color:var(--text-muted); font-size:0.9rem;">No past visits recorded for this patient.</p>'}
+                </div>
+            `;
+        }
+
+        function startConsultation() {
+            if (!activeConsultation) {
+                activeConsultation = { tjc: 0, sjc: 0, jointStates: {}, rx: [] };
+            }
+
+            const patients = getPatients();
+            const patient = patients.find(p => p.id === selectedPatientId);
+            const diag = patient ? patient.diagnosis : "";
+            const area = document.getElementById('active-consultation-section');
+
+            let scoringHTML = "";
+
+            if (diag.includes("Rheumatoid") || diag.includes("Undifferentiated") || diag.includes("Connective")) {
+                scoringHTML = `
+                    <div class="card-title">28-Joint Clinical Assessment (DAS28 / CDAI / SDAI)</div>
+                    <div class="joint-grid-desktop">
+                        ${jointsList.map((j, idx) => {
+                            const st = activeConsultation.jointStates[idx] || 'normal';
+                            return `<div class="joint-btn ${st}" onclick="toggleJoint(${idx})">${j}<br><strong>${st.toUpperCase()}</strong></div>`;
+                        }).join('')}
+                    </div>
+                    <div class="form-grid-4">
+                        <div class="form-group"><label>ESR (mm/1st hr)</label><input type="number" id="c-esr" value="25" oninput="calcScores()"></div>
+                        <div class="form-group"><label>CRP (mg/dL)</label><input type="number" id="c-crp" value="1.0" oninput="calcScores()"></div>
+                        <div class="form-group"><label>Patient Global (0-10)</label><input type="number" id="c-pga" value="3" oninput="calcScores()"></div>
+                        <div class="form-group"><label>Evaluator Global (0-10)</label><input type="number" id="c-ega" value="2" oninput="calcScores()"></div>
+                    </div>
+                    <div class="score-row">
+                        <div class="score-box"><div class="score-box-lbl">DAS28-ESR</div><div class="score-box-val" id="d-das">0.0</div></div>
+                        <div class="score-box"><div class="score-box-lbl">CDAI</div><div class="score-box-val" id="d-cdai">0.0</div></div>
+                        <div class="score-box"><div class="score-box-lbl">SDAI</div><div class="score-box-val" id="d-sdai">0.0</div></div>
+                    </div>
+                `;
+            } else if (diag.includes("Lupus") || diag.includes("SLE")) {
+                scoringHTML = `
+                    <div class="card-title">SLEDAI-2K Disease Activity Checklist</div>
+                    <div class="checklist-desktop" onchange="calcScores()">
+                        <label class="check-item"><input type="checkbox" class="sledai-ck" value="8"> Inflammatory Arthritis (+8)</label>
+                        <label class="check-item"><input type="checkbox" class="sledai-ck" value="6"> Proteinuria > 0.5g / 24h (+6)</label>
+                        <label class="check-item"><input type="checkbox" class="sledai-ck" value="4"> Cutaneous Vasculitis (+4)</label>
+                        <label class="check-item"><input type="checkbox" class="sledai-ck" value="2"> Malar / Discoid Rash (+2)</label>
+                        <label class="check-item"><input type="checkbox" class="sledai-ck" value="2"> Alopecia (+2)</label>
+                        <label class="check-item"><input type="checkbox" class="sledai-ck" value="2"> Low Complement C3 / C4 (+2)</label>
+                        <label class="check-item"><input type="checkbox" class="sledai-ck" value="2"> Increased Anti-dsDNA (+2)</label>
+                    </div>
+                    <div style="background:var(--primary-light); padding:14px; border-radius:var(--radius); margin-top:14px; text-align:center;">
+                        Computed SLEDAI-2K Score: <strong id="sledai-val" style="font-size:1.5rem; color:var(--primary-dark);">0</strong>
+                    </div>
+                `;
+            } else if (diag.includes("Spondylitis") || diag.includes("SpA")) {
+                scoringHTML = `
+                    <div class="card-title">Axial Spondyloarthritis Assessment (BASDAI & ASDAS)</div>
+                    <div class="form-grid-3" oninput="calcScores()">
+                        <div><label style="font-size:0.8rem;">Fatigue VAS (0-10): <strong id="bv1">4</strong></label><input type="range" min="0" max="10" value="4" id="bas1" oninput="document.getElementById('bv1').innerText=this.value" style="width:100%;"></div>
+                        <div><label style="font-size:0.8rem;">Spinal Pain VAS (0-10): <strong id="bv2">5</strong></label><input type="range" min="0" max="10" value="5" id="bas2" oninput="document.getElementById('bv2').innerText=this.value" style="width:100%;"></div>
+                        <div><label style="font-size:0.8rem;">Morning Stiffness VAS (0-10): <strong id="bv3">4</strong></label><input type="range" min="0" max="10" value="4" id="bas3" oninput="document.getElementById('bv3').innerText=this.value" style="width:100%;"></div>
+                    </div>
+                    <div class="form-group" style="margin-top:12px; max-width:250px;"><label>CRP (mg/L)</label><input type="number" id="asdas-crp" value="12" oninput="calcScores()"></div>
+                    <div class="score-row">
+                        <div class="score-box"><div class="score-box-lbl">BASDAI</div><div class="score-box-val" id="basdai-val">0.0</div></div>
+                        <div class="score-box"><div class="score-box-lbl">ASDAS-CRP</div><div class="score-box-val" id="asdas-val">0.0</div></div>
+                    </div>
+                `;
+            } else if (diag.includes("Psoriatic")) {
+                scoringHTML = `
+                    <div class="card-title">DAPSA Score (Psoriatic Arthritis)</div>
+                    <div class="form-grid-4" oninput="calcScores()">
+                        <div class="form-group"><label>Tender Joint Count (0-68)</label><input type="number" id="dapsa-tj" value="4"></div>
+                        <div class="form-group"><label>Swollen Joint Count (0-66)</label><input type="number" id="dapsa-sj" value="2"></div>
+                        <div class="form-group"><label>Patient Global Pain (0-10)</label><input type="number" id="dapsa-p1" value="4"></div>
+                        <div class="form-group"><label>CRP (mg/dL)</label><input type="number" id="dapsa-crp" value="1.2"></div>
+                    </div>
+                    <div style="background:var(--primary-light); padding:14px; border-radius:var(--radius); text-align:center;">
+                        Calculated DAPSA Index: <strong id="dapsa-val" style="font-size:1.5rem; color:var(--primary-dark);">0.0</strong>
+                    </div>
+                `;
+            } else if (diag.includes("Polyangiitis") || diag.includes("Vasculitis") || diag.includes("Arteritis")) {
+                scoringHTML = `
+                    <div class="card-title">BVAS (Birmingham Vasculitis Activity Score)</div>
+                    <div class="checklist-desktop" onchange="calcScores()">
+                        <label class="check-item"><input type="checkbox" class="bvas-ck" value="1"> Systemic (Fever/Weight Loss) (+1)</label>
+                        <label class="check-item"><input type="checkbox" class="bvas-ck" value="2"> Cutaneous (Purpura/Ulcers) (+2)</label>
+                        <label class="check-item"><input type="checkbox" class="bvas-ck" value="3"> ENT (Sinusitis/Crusts) (+3)</label>
+                        <label class="check-item"><input type="checkbox" class="bvas-ck" value="4"> Pulmonary (Infiltrates/Nodules) (+4)</label>
+                        <label class="check-item"><input type="checkbox" class="bvas-ck" value="6"> Renal (RPGN / Hematuria) (+6)</label>
+                    </div>
+                    <div style="background:var(--primary-light); padding:14px; border-radius:var(--radius); margin-top:14px; text-align:center;">
+                        Total BVAS Score: <strong id="bvas-val" style="font-size:1.5rem; color:var(--primary-dark);">0</strong>
+                    </div>
+                `;
+            } else {
+                scoringHTML = `
+                    <div class="card-title">Standard Clinical Assessment</div>
+                    <div class="form-grid-2">
+                        <div class="form-group"><label>ESR (mm/hr)</label><input type="number" value="20"></div>
+                        <div class="form-group"><label>CRP (mg/dL)</label><input type="number" value="0.8"></div>
+                    </div>
+                `;
+            }
+
+            area.innerHTML = `
+                <div class="card">${scoringHTML}</div>
+                <div class="card">
+                    <div class="card-title">Prescription & Plan Builder</div>
+                    <div class="form-group"><label>Clinical Summary & Advice</label><textarea id="d-adv" rows="3" placeholder="Clinical notes, diet advice, follow-up timeline..."></textarea></div>
+                    
+                    <div class="form-grid-4" style="margin-bottom:8px;">
+                        <input type="text" id="rx-n" placeholder="Medicine Name">
+                        <input type="text" id="rx-d" placeholder="Dosage (e.g. 15mg)">
+                        <input type="text" id="rx-f" placeholder="Frequency (e.g. Weekly)">
+                        <input type="text" id="rx-dur" placeholder="Duration (e.g. 3 Months)">
+                    </div>
+                    <button class="btn btn-secondary" onclick="addRxDesktop()">➕ Add Medicine Entry</button>
+                    
+                    <div style="margin-top:14px; overflow-x:auto;">
+                        <table class="rx-table">
+                            <thead><tr><th>Medication</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr></thead>
+                            <tbody id="d-rx-table-body">
+                                <tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No medications added yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('active-consultation-section').innerHTML=''">Cancel</button>
+                        <button class="btn btn-primary" onclick="saveConsultation()">💾 Save & Complete Visit</button>
+                    </div>
+                </div>
+            `;
+
+            setTimeout(calcScores, 50);
+        }
+
+        function setSidebarTab(tab) {
+            sidebarMode = tab;
+            document.getElementById('btn-tab-patients').classList.toggle('active', tab === 'patients');
+            document.getElementById('btn-tab-new').classList.toggle('active', tab === 'new');
+            renderSidebar();
+        }
+
+        function selectPatient(id) {
+            selectedPatientId = id;
+            activeConsultation = null;
+            renderSidebar();
+            renderWorkspace();
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const patients = getPatients();
+            const newId = `RHEUM-${1001 + patients.length}`;
+            patients.push({
+                id: newId,
+                name: document.getElementById('d-name').value,
+                age: document.getElementById('d-age').value,
+                gender: document.getElementById('d-sex').value,
+                diagnosis: document.getElementById('d-diag').value,
+                visits: []
+            });
+            savePatients(patients);
+            selectedPatientId = newId;
+            setSidebarTab('patients');
+            renderWorkspace();
+        }
+
+        function toggleJoint(idx) {
+            const nextMap = { 'normal': 'tender', 'tender': 'swollen', 'swollen': 'both', 'both': 'normal' };
+            activeConsultation.jointStates[idx] = nextMap[activeConsultation.jointStates[idx] || 'normal'];
+
+            let tjc = 0, sjc = 0;
+            Object.values(activeConsultation.jointStates).forEach(st => {
+                if (st === 'tender' || st === 'both') tjc++;
+                if (st === 'swollen' || st === 'both') sjc++;
+            });
+            activeConsultation.tjc = tjc;
+            activeConsultation.sjc = sjc;
+            startConsultation();
+        }
+
+        function calcScores() {
+            if(document.getElementById('d-das')) {
+                const tjc = activeConsultation ? activeConsultation.tjc : 0;
+                const sjc = activeConsultation ? activeConsultation.sjc : 0;
+                const esr = parseFloat(document.getElementById('c-esr')?.value) || 10;
+                const crp = parseFloat(document.getElementById('c-crp')?.value) || 0.5;
+                const pga = parseFloat(document.getElementById('c-pga')?.value) || 0;
+                const ega = parseFloat(document.getElementById('c-ega')?.value) || 0;
+
+                const das28 = (0.56 * Math.sqrt(tjc) + 0.28 * Math.sqrt(sjc) + 0.70 * Math.log(esr) + 0.014 * (pga * 10)).toFixed(2);
+                const cdai = (tjc + sjc + pga + ega).toFixed(1);
+                const sdai = (parseFloat(cdai) + crp).toFixed(1);
+
+                document.getElementById('d-das').innerText = das28;
+                document.getElementById('d-cdai').innerText = cdai;
+                document.getElementById('d-sdai').innerText = sdai;
+            }
+
+            const sledaiCks = document.querySelectorAll('.sledai-ck');
+            if(sledaiCks.length > 0) {
+                let score = 0;
+                sledaiCks.forEach(ck => { if(ck.checked) score += parseInt(ck.value); });
+                if(document.getElementById('sledai-val')) document.getElementById('sledai-val').innerText = score;
+            }
+
+            if(document.getElementById('bas1')) {
+                const q1 = parseFloat(document.getElementById('bas1').value);
+                const q2 = parseFloat(document.getElementById('bas2').value);
+                const q3 = parseFloat(document.getElementById('bas3').value);
+                const crp = parseFloat(document.getElementById('asdas-crp')?.value) || 5;
+
+                const basdai = ((q1 + q2 + q3) / 3).toFixed(1);
+                const asdas = (0.121 * q2 + 0.058 * q1 + 0.110 * q3 + 0.579 * Math.log(crp + 1)).toFixed(2);
+
+                if(document.getElementById('basdai-val')) document.getElementById('basdai-val').innerText = basdai;
+                if(document.getElementById('asdas-val')) document.getElementById('asdas-val').innerText = asdas;
+            }
+
+            if(document.getElementById('dapsa-tj')) {
+                const tj = parseFloat(document.getElementById('dapsa-tj').value) || 0;
+                const sj = parseFloat(document.getElementById('dapsa-sj').value) || 0;
+                const p1 = parseFloat(document.getElementById('dapsa-p1').value) || 0;
+                const crp = parseFloat(document.getElementById('dapsa-crp').value) || 0;
+                const dapsa = (tj + sj + p1 + crp).toFixed(1);
+                if(document.getElementById('dapsa-val')) document.getElementById('dapsa-val').innerText = dapsa;
+            }
+
+            const bvasCks = document.querySelectorAll('.bvas-ck');
+            if(bvasCks.length > 0) {
+                let score = 0;
+                bvasCks.forEach(ck => { if(ck.checked) score += parseInt(ck.value); });
+                if(document.getElementById('bvas-val')) document.getElementById('bvas-val').innerText = score;
+            }
+        }
+
+        function addRxDesktop() {
+            const name = document.getElementById('rx-n').value;
+            const dose = document.getElementById('rx-d').value;
+            const freq = document.getElementById('rx-f').value;
+            const duration = document.getElementById('rx-dur').value || '1 Month';
+            if(!name) return;
+
+            activeConsultation.rx.push({ name, dose, freq, duration });
+            document.getElementById('rx-n').value = '';
+            document.getElementById('rx-d').value = '';
+
+            const tbody = document.getElementById('d-rx-table-body');
+            tbody.innerHTML = activeConsultation.rx.map(i => `
+                <tr>
+                    <td><strong>${i.name}</strong></td>
+                    <td>${i.dose}</td>
+                    <td>${i.freq}</td>
+                    <td>${i.duration}</td>
+                </tr>
+            `).join('');
+        }
+
+        function saveConsultation() {
+            const patients = getPatients();
+            const p = patients.find(x => x.id === selectedPatientId);
+            if(p) {
+                if(!p.visits) p.visits = [];
+                p.visits.unshift({
+                    date: new Date().toISOString().split('T')[0],
+                    assessment: document.getElementById('d-adv').value,
+                    rx: activeConsultation.rx
+                });
+                savePatients(patients);
+            }
+            renderWorkspace();
+        }
+
+        function filterPatients(val) {
+            const q = val.toLowerCase();
+            document.querySelectorAll('#patient-sidebar-list .patient-card').forEach(el => {
+                el.style.display = el.innerText.toLowerCase().includes(q) ? 'block' : 'none';
+            });
+        }
+
+        function printPrescription(patientId, visitIndex) {
+            const patients = getPatients();
+            const patient = patients.find(p => p.id === patientId);
+            if (!patient || !patient.visits[visitIndex]) return;
+
+            const visit = patient.visits[visitIndex];
+            const printArea = document.getElementById('printable-prescription');
+
+            printArea.innerHTML = `
+                <div>
+                    <div class="rx-header-box">
+                        <svg class="rx-header-logo" viewBox="0 0 100 100" fill="none">
+                            <path d="M 28,30 C 42,27 48,22 50,18 C 52,22 58,27 72,30 C 73,50 71,68 59,80 C 53,85 51,87 50,88 C 49,87 47,85 41,80 C 29,68 27,50 28,30 Z" fill="#009688"/>
+                            <path d="M 39,36 H 43 V 32 H 47 V 36 H 51 V 40 H 47 V 44 H 43 V 40 H 39 Z" fill="#FFFFFF"/>
+                            <path d="M 45,15 C 47,28 47,38 52,43 C 55,46 58,45 58,51 C 58,56 53,58 51,62 C 49,66 50,78 52,85 C 49,78 47,68 48,62 C 49,58 53,56 53,51 C 53,47 50,47 47,42 C 43,36 43,26 43,15 Z" fill="#FFFFFF"/>
+                            <path d="M 51,62 C 53,65 52,78 58,85 C 56,78 54,66 52,62 Z" fill="#00796b"/>
+                        </svg>
+                        <div style="flex-grow:1;">
+                            <div class="rx-title-main">JHAJI'S RHEUMATOLOGICAL DISORDERS AND REHABILITATION CENTRE</div>
+                            <div class="rx-doctor-tag">DR AMAR KUMAR JHA, MBBS, MD | REGD NO-24473</div>
+                        </div>
+                    </div>
+                    <div class="rx-patient-bar">
+                        <div>Patient Name <span class="rx-line-val">${patient.name}</span></div>
+                        <div>Age <span class="rx-line-val">${patient.age} Yrs</span></div>
+                        <div>Sex <span class="rx-line-val">${patient.gender}</span></div>
+                        <div>Date <span class="rx-line-val">${visit.date}</span></div>
+                    </div>
+                    <div class="rx-body">
+                        <div class="rx-symbol-big">Rx</div>
+                        <table class="rx-table-print">
+                            <thead>
+                                <tr><th>Rx / Medicine Name</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr>
+                            </thead>
+                            <tbody>
+                                ${visit.rx && visit.rx.length > 0 ? visit.rx.map(m => `
+                                    <tr>
+                                        <td><strong>${m.name}</strong></td>
+                                        <td>${m.dose || '-'}</td>
+                                        <td>${m.freq || '-'}</td>
+                                        <td>${m.duration || '-'}</td>
+                                    </tr>
+                                `).join('') : '<tr><td colspan="4">No prescriptions recorded.</td></tr>'}
+                            </tbody>
+                        </table>
+                        ${visit.assessment ? `<div style="margin-top:20px;"><strong>Advice / Plan:</strong><p>${visit.assessment}</p></div>` : ''}
+                    </div>
+                </div>
+                <div class="rx-footer-box">
+                    Near RB memorial hospital, Benta, Laheriasarai, Darbhanga-846001<br>
+                    Email - jha.amar7@gmail.com | Phone - 7008532671
+                </div>
+            `;
+            window.print();
+        }
+
+        window.onload = () => {
+            renderSidebar();
+            renderWorkspace();
+        };
+    </script>
+</body>
+</html>
